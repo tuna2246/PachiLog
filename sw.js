@@ -1,4 +1,4 @@
-const CACHE = "pachilog-v4";
+const CACHE = "pachilog-v5";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", event => {
