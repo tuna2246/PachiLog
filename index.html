@@ -4,7 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#17233b">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PachiLog">
   <meta name="description" content="パチンコ店のイベント結果と傾向を記録・分析するモバイルアプリ">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <link rel="icon" type="image/png" href="./icon-192.png">
   <title>PachiLog｜イベント結果記録</title>
   <style>
     :root{--ink:#17233b;--ink2:#263652;--muted:#718096;--paper:#f4f1e9;--card:#fffefa;--accent:#ef6f3c;--accent2:#d9552a;--line:#e2ddd1;--good:#16856b;--shadow:0 12px 30px rgba(23,35,59,.12)}
@@ -40,6 +47,7 @@
 
     <section class="view" data-view="settings">
       <div class="page-intro"><p class="eyebrow">DATA</p><h2 class="page-title">データ管理</h2><p>バックアップを取っておくと、機種変更時にも記録を移せます。</p></div>
+      <div class="settings-card" id="installCard"><h3>アプリとして使う</h3><button class="setting-btn" id="installBtn">ホーム画面に追加<small id="installHelp">URL欄なしで、アプリのように起動できます</small></button></div>
       <div class="settings-card"><h3>バックアップ</h3><button class="setting-btn" id="exportBtn">データを書き出す<small>JSONファイルとして保存</small></button><button class="setting-btn" id="importBtn">データを読み込む<small>以前のバックアップを復元</small></button><input class="hidden-file" type="file" id="importFile" accept="application/json"></div>
       <div class="settings-card"><h3>初期データ</h3><button class="setting-btn" id="sampleBtn">サンプルデータを入れ直す</button><button class="setting-btn danger" id="clearBtn">すべての記録を削除</button></div>
       <p class="storage-note">この版のデータは、登録したスマホ・ブラウザの中だけに保存されます。同じURLでも別の端末には自動同期されません。定期的な書き出しをおすすめします。</p>
@@ -93,7 +101,8 @@
     document.addEventListener('click',e=>{const b=e.target.closest('.record');if(!b)return;const r=records.find(x=>x.id===b.dataset.id);if(!r)return;detailId=r.id;document.querySelector('#detailTitle').textContent=r.store;document.querySelector('#detailBody').innerHTML=`<p class="record-kind">${esc(r.event)} · ${esc(r.date)}</p><div class="detail-grid"><div class="detail-item"><span>店舗総差枚</span><b>${r.diff===null?'未入力':fmt(r.diff)+'枚'}</b></div><div class="detail-item"><span>傾向</span><b>${esc(r.patterns.join('・')||'未入力')}</b></div><div class="detail-item"><span>末尾</span><b>${esc(r.tails.join('・')||'未入力')}</b></div><div class="detail-item"><span>並び</span><b>${r.rowCount?esc(r.rowCount)+'台':'未入力'}</b></div></div><p class="detail-note"><b>強かった機種</b><br>${esc(r.machines||'未入力')}</p><p class="detail-note"><b>メモ</b><br>${esc(r.note||'未入力')}</p>`;openModal('#detailModal')});
     document.querySelector('#deleteRecord').onclick=()=>{if(!detailId||!confirm('この記録を削除しますか？'))return;records=records.filter(r=>r.id!==detailId);save();closeModals();toast('記録を削除しました')};
     document.querySelector('#exportBtn').onclick=()=>{const blob=new Blob([JSON.stringify(records,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`pachilog-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(a.href);toast('バックアップを書き出しました')};document.querySelector('#importBtn').onclick=()=>document.querySelector('#importFile').click();document.querySelector('#importFile').onchange=async e=>{try{const data=JSON.parse(await e.target.files[0].text());if(!Array.isArray(data))throw 0;if(!confirm(`${data.length}件のデータに置き換えますか？`))return;records=data;save();toast('データを読み込みました')}catch(err){alert('読み込めないファイルです。PachiLogのバックアップを選んでください。')}e.target.value=''};
-    document.querySelector('#sampleBtn').onclick=()=>{if(confirm('現在の記録をサンプルデータに置き換えますか？')){records=structuredClone(sample);save();toast('サンプルデータを復元しました')}};document.querySelector('#clearBtn').onclick=()=>{if(confirm('すべての記録を削除します。この操作は元に戻せません。')){records=[];save();toast('すべて削除しました')}};window.addEventListener('keydown',e=>{if(e.key==='Escape')closeModals()});
+    let installPrompt=null;const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;if(standalone){document.querySelector('#installCard').innerHTML='<h3>アプリとして使用中</h3><div class="setting-btn">ホーム画面から起動しています<small>URL欄のないアプリ表示です</small></div>'}else{window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;document.querySelector('#installHelp').textContent='タップしてPachiLogをインストール'});document.querySelector('#installBtn').onclick=async()=>{if(installPrompt){installPrompt.prompt();await installPrompt.userChoice;installPrompt=null}else{const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);alert(ios?'Safari下部の共有ボタンから「ホーム画面に追加」を選んでください。':'ブラウザのメニューから「ホーム画面に追加」または「アプリをインストール」を選んでください。')}}}
+    document.querySelector('#sampleBtn').onclick=()=>{if(confirm('現在の記録をサンプルデータに置き換えますか？')){records=structuredClone(sample);save();toast('サンプルデータを復元しました')}};document.querySelector('#clearBtn').onclick=()=>{if(confirm('すべての記録を削除します。この操作は元に戻せません。')){records=[];save();toast('すべて削除しました')}};window.addEventListener('keydown',e=>{if(e.key==='Escape')closeModals()});if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));
     save();
   </script>
 </body>
